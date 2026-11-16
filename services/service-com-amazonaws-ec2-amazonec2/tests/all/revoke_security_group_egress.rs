@@ -332,6 +332,40 @@ const REVOKE_CASES: &[RevokeCase] = &[
         named_by: NamedBy::Properties,
     },
     RevokeCase {
+        // What the Terraform AWS provider sends after it creates a group: the all-traffic
+        // rule with FromPort=0 and ToPort=0, which AWS revokes because a port range is no
+        // part of an all-protocols rule.
+        case: "the all-traffic rule, named with the 0-0 port range Terraform sends",
+        seeded: &[
+            rule("-1", Destination::Ipv4("0.0.0.0/0")),
+            ranged("tcp", (443, 443), Destination::Ipv4("10.1.0.0/16")),
+        ],
+        target: 0,
+        spelled: ranged("-1", (0, 0), Destination::Ipv4("0.0.0.0/0")),
+        named_by: NamedBy::Properties,
+    },
+    RevokeCase {
+        case: "the all-traffic rule, named with the -1 to -1 port range",
+        seeded: &[rule("-1", Destination::Ipv4("0.0.0.0/0"))],
+        target: 0,
+        spelled: ranged("-1", (-1, -1), Destination::Ipv4("0.0.0.0/0")),
+        named_by: NamedBy::Properties,
+    },
+    RevokeCase {
+        case: "an all-traffic rule stored with a port range, named with none",
+        seeded: &[ranged("-1", (0, 0), Destination::Ipv4("0.0.0.0/0"))],
+        target: 0,
+        spelled: rule("-1", Destination::Ipv4("0.0.0.0/0")),
+        named_by: NamedBy::Properties,
+    },
+    RevokeCase {
+        case: "a protocol number with no port range, named with one",
+        seeded: &[rule("47", Destination::Ipv4("198.51.100.0/24"))],
+        target: 0,
+        spelled: ranged("47", (0, 0), Destination::Ipv4("198.51.100.0/24")),
+        named_by: NamedBy::Properties,
+    },
+    RevokeCase {
         case: "a single-port tcp rule",
         seeded: &[
             ranged("tcp", (443, 443), Destination::Ipv4("10.1.0.0/16")),
