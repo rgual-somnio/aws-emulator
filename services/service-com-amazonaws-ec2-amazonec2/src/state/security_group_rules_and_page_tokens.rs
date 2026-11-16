@@ -1998,6 +1998,22 @@ pub fn protocol_is_icmp(protocol: &str) -> bool {
     protocol.eq_ignore_ascii_case(IP_PROTOCOL_ICMP) || protocol.eq_ignore_ascii_case(IP_PROTOCOL_ICMPV6)
 }
 
+/// The IANA numbers of the four protocols whose `FromPort`/`ToPort` mean something: TCP (6),
+/// UDP (17), ICMP (1) and ICMPv6 (58).
+pub const PORT_CARRYING_PROTOCOL_NUMBERS: [&str; 4] = ["6", "17", "1", "58"];
+
+/// Whether a rule on `protocol` has a port range (or, for ICMP, a type and code) at all.
+///
+/// "Specifying -1 or a protocol number other than tcp, udp, icmp, or icmpv6 allows traffic
+/// on all ports, regardless of any port range you specify" (`IpPermission$IpProtocol`): for
+/// every other protocol the range a request carries is not part of the rule, so it is not
+/// part of what names the rule either.
+pub fn protocol_carries_ports(protocol: &str) -> bool {
+    protocol_requires_port_range(protocol)
+        || protocol_is_icmp(protocol)
+        || PORT_CARRYING_PROTOCOL_NUMBERS.contains(&protocol)
+}
+
 /// `protocol` in the one form a stored rule carries it in.
 ///
 /// The model spells every protocol name in lower case (`tcp`, `udp`, `icmp`, `icmpv6` —

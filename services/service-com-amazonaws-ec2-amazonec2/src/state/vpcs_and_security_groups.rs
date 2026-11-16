@@ -2017,9 +2017,14 @@ impl SecurityGroupRuleAtom {
     /// carries them in ([`canonical_ip_protocol`], [`canonical_rule_source`]), so a request
     /// that spells either differently still names the same rule.
     ///
-    /// The port range is kept exactly as given — a rule's ports are values a request "must
-    /// match … exactly" (`RevokeSecurityGroupIngress`), so neither end is dropped or
-    /// defaulted for any protocol.
+    /// On a protocol that carries a port range ([`protocol_carries_ports`]) the range is kept
+    /// exactly as given — a rule's ports are values a request "must match … exactly"
+    /// (`RevokeSecurityGroupIngress`), so neither end is dropped or defaulted. On any other
+    /// protocol — all protocols (`-1`) among them — the rule allows "all ports, regardless of
+    /// any port range you specify" (`IpPermission$IpProtocol`), so a range is no part of the
+    /// rule and is dropped: the all-traffic rule a new group carries is then the same rule
+    /// whether a request names it with no range, with `0`–`0` (what the Terraform AWS
+    /// provider sends to revoke it) or with `-1`–`-1`.
     pub fn new(
         ip_protocol: Option<&str>,
         from_port: Option<i32>,
@@ -2028,10 +2033,11 @@ impl SecurityGroupRuleAtom {
         description: Option<String>,
     ) -> Self {
         let ip_protocol = canonical_ip_protocol(ip_protocol.unwrap_or(ALL_IP_PROTOCOLS).trim());
+        let carries_ports = protocol_carries_ports(&ip_protocol);
         Self {
+            from_port: from_port.filter(|_| carries_ports),
+            to_port: to_port.filter(|_| carries_ports),
             ip_protocol,
-            from_port,
-            to_port,
             source: canonical_rule_source(source),
             description,
         }
